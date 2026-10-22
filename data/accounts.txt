@@ -1,0 +1,3 @@
+# Cole seus auth_tokens abaixo, 1 por linha:
+# Exemplo:
+# 6c8a91b...

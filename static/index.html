@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conecta System // Multi-Account Automation Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Real-Time Critical Alert Banner -->
+  <div id="alert-banner" class="alert-banner hidden">
+    <div class="alert-content">
+      <div class="alert-icon-wrapper">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="alert-text">
+        <div class="alert-title">ALERTA CRÍTICO // CONTA CAIU EM TEMPO REAL</div>
+        <div id="alert-message" class="alert-desc">A conta @handle foi bloqueada/suspensa.</div>
+      </div>
+      <button class="alert-dismiss" onclick="dismissAlert()">Fechar</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="x-icon">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h1>Conecta System</h1>
+          <p>Automação Multi-Conta, Educação, Raspagem & Monitoramento</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="connection-pill">
+          <span class="live-dot" id="live-indicator"></span>
+          <span id="connection-status">Conectando...</span>
+        </div>
+
+        <button id="btn-import-modal" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Importar (1:1:1)
+        </button>
+
+        <button id="btn-start" class="btn btn-primary" onclick="startAutomation()">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="btn-icon">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Iniciar Ciclo
+        </button>
+
+        <button id="btn-stop" class="btn btn-danger hidden" onclick="stopAutomation()">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="btn-icon">
+            <rect x="6" y="4" width="4" height="16"/>
+            <rect x="14" y="4" width="4" height="16"/>
+          </svg>
+          Pausar
+        </button>
+      </div>
+    </header>
+
+    <!-- Metrics Row -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Total de Contas</div>
+        <div class="metric-val" id="metric-total">0</div>
+        <div class="metric-sub">Pool pareado 1:1:1</div>
+      </div>
+
+      <div class="metric-card card-active">
+        <div class="metric-label">Contas Online</div>
+        <div class="metric-val" id="metric-active">0</div>
+        <div class="metric-sub">Ativas e saudáveis</div>
+      </div>
+
+      <div class="metric-card card-educated">
+        <div class="metric-label">Contas Educadas</div>
+        <div class="metric-val" id="metric-educated">0</div>
+        <div class="metric-sub">Posts Telegram curtidos</div>
+      </div>
+
+      <div class="metric-card card-fallen" id="card-fallen-box">
+        <div class="metric-label">Contas Caídas / Suspensas</div>
+        <div class="metric-val" id="metric-fallen">0</div>
+        <div class="metric-sub" id="metric-fallen-sub">Nenhuma queda detectada</div>
+      </div>
+
+      <div class="metric-card card-likes">
+        <div class="metric-label">Total Curtidas</div>
+        <div class="metric-val" id="metric-likes">0</div>
+        <div class="metric-sub">Telegram + 40-45% Feed</div>
+      </div>
+
+      <div class="metric-card card-comments">
+        <div class="metric-label">Comentários Feed</div>
+        <div class="metric-val" id="metric-comments">0</div>
+        <div class="metric-sub">Links dedicados postados</div>
+      </div>
+    </section>
+
+    <!-- Quick Action Launch Bar -->
+    <div class="quick-action-bar">
+      <div class="quick-title">DISPARO RÁPIDO EM LOTE (CONECTA SYSTEM):</div>
+      <div class="quick-buttons">
+        <button class="btn btn-sm btn-outline" onclick="triggerUnfollowNonFollowers()">Remover Quem Não Segue de Volta</button>
+        <button class="btn btn-sm btn-outline" onclick="openAutoLikeModal()">Curtidor por Palavra-Chave</button>
+        <button class="btn btn-sm btn-outline" onclick="openVideoModal()">Baixar Vídeo MP4</button>
+        <button class="btn btn-sm btn-outline" onclick="exportData('csv')">Exportar CSV</button>
+        <button class="btn btn-sm btn-outline" onclick="exportData('json')">Exportar JSON</button>
+      </div>
+      <div class="quick-proxy-panel">
+        <div class="quick-proxy-copy">
+          <strong>PROXIES DAS CONTAS</strong>
+          <span>1 por linha: <code>host:port:login:password</code> ou <code>host:port@login:password</code></span>
+        </div>
+        <textarea id="quick-proxies" rows="2" placeholder="proxy.exemplo.com:8080:login:senha&#10;proxy.exemplo.com:8081@login:senha"></textarea>
+        <button class="btn btn-sm btn-secondary" onclick="applyQuickProxies()">Aplicar Proxies</button>
+      </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="dashboard-main">
+      <div class="tabs-container">
+        <div class="tabs-nav">
+          <button class="tab-btn active" data-tab="accounts">Lista de Contas & Telemetria (<span id="accounts-tab-count">0</span>)</button>
+          <button class="tab-btn" data-tab="tools">Hub de Ferramentas (Scripts de Navegador)</button>
+          <button class="tab-btn" data-tab="logs">Terminal de Logs ao Vivo (<span id="logs-count">0</span>)</button>
+          <button class="tab-btn" data-tab="settings">Configurações & Taxas</button>
+        </div>
+
+        <div class="sound-toggle-wrapper">
+          <label class="switch-label">
+            <input type="checkbox" id="sound-toggle" checked>
+            <span class="switch-slider"></span>
+            <span class="switch-text">Alarme Sonoro de Queda</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab 1: Accounts Table -->
+      <div class="tab-content active" id="tab-accounts">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">#</th>
+                <th>Grupo</th>
+                <th>Usuário / Handle</th>
+                <th>Status em Tempo Real</th>
+                <th>Proxy (1:1)</th>
+                <th>Link Atribuído (1:1)</th>
+                <th style="text-align: center;">Seguidores</th>
+                <th style="text-align: center;">Likes (Telegram)</th>
+                <th style="text-align: center;">Comentários (Feed)</th>
+                <th style="text-align: center;">Unfollows</th>
+                <th>Última Ação & Detalhes</th>
+              </tr>
+            </thead>
+            <tbody id="accounts-table-body">
+              <tr class="empty-row">
+                <td colspan="11">
+                  <div class="empty-state">
+                    <h3>Nenhuma conta importada ainda</h3>
+                    <p>Clique em <strong>"Importar (1:1:1)"</strong> para carregar seus Tokens, Proxies e Links.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 2: Hub de Ferramentas -->
+      <div class="tab-content" id="tab-tools">
+        <div class="tools-header-box">
+          <div class="tools-title-wrap">
+            <h2>Hub de Ferramentas Conecta System</h2>
+            <p>Ferramentas de automação para gerenciamento das contas e rotinas do sistema.</p>
+          </div>
+        </div>
+
+        <div class="tools-grid">
+          <div class="xaction-card">
+            <div class="xaction-badge">100% Grátis</div>
+            <h3>Deixar de Seguir Quem Não Te Segue</h3>
+            <p>Varre a lista de seguindo e remove automaticamente os usuários que não te seguem de volta.</p>
+            <div class="xaction-instructions">Vá para: <code>x.com/SEU_USUARIO/following</code> - Abra F12 - Cole o código</div>
+            <div class="xaction-actions">
+              <button class="btn btn-secondary btn-sm" onclick="copyToolScript('unfollowNonFollowers')">Copiar Script (F12)</button>
+              <button class="btn btn-primary btn-sm" onclick="triggerUnfollowNonFollowers()">Executar nas Contas</button>
+            </div>
+          </div>
+
+          <div class="xaction-card">
+            <div class="xaction-badge">100% Grátis</div>
+            <h3>Deixar de Seguir Todos em Massa</h3>
+            <p>Remove todos os perfis seguidos com confirmação contínua e rolagem de página automatizada.</p>
+            <div class="xaction-instructions">Vá para: <code>x.com/SEU_USUARIO/following</code> - Abra F12 - Cole o código</div>
+            <div class="xaction-actions">
+              <button class="btn btn-secondary btn-sm" onclick="copyToolScript('unfollowEveryone')">Copiar Script (F12)</button>
+            </div>
+          </div>
+
+          <div class="xaction-card">
+            <div class="xaction-badge">100% Grátis</div>
+            <h3>Curtidor Automático por Palavras-Chave</h3>
+            <p>Curte automaticamente tweets que contenham palavras-chave customizadas (telegram, crypto, web3, etc.).</p>
+            <div class="xaction-instructions">Vá para: <code>x.com/home</code> ou busca - Abra F12 - Cole o código</div>
+            <div class="xaction-actions">
+              <button class="btn btn-secondary btn-sm" onclick="copyToolScript('autoLiker')">Copiar Script (F12)</button>
+              <button class="btn btn-primary btn-sm" onclick="openAutoLikeModal()">Ativar em Lote</button>
+            </div>
+          </div>
+
+          <div class="xaction-card">
+            <div class="xaction-badge">100% Grátis</div>
+            <h3>Seguir Quem Curtiu / Retuitou</h3>
+            <p>Segue os usuários da lista de curtidas ou retweets de um post específico para atrair público qualificado.</p>
+            <div class="xaction-instructions">Abra qualquer tweet → Clique na lista de likes/retweets → Abra F12</div>
+            <div class="xaction-actions">
+              <button class="btn btn-secondary btn-sm" onclick="copyToolScript('followEngagers')">Copiar Script (F12)</button>
+            </div>
+          </div>
+
+          <div class="xaction-card">
+            <div class="xaction-badge">100% Grátis</div>
+            <h3>Baixador de Vídeos do X / Twitter</h3>
+            <p>Extrai o stream .MP4 na maior resolução disponível sem anúncios nem serviços externos.</p>
+            <div class="xaction-instructions">Abra o tweet com o vídeo → Abra F12 → Cole o script</div>
+            <div class="xaction-actions">
+              <button class="btn btn-secondary btn-sm" onclick="copyToolScript('videoDownloader')">Copiar Script (F12)</button>
+              <button class="btn btn-primary btn-sm" onclick="openVideoModal()">Baixar pela Web</button>
+            </div>
+          </div>
+
+          <div class="xaction-card">
+            <div class="xaction-badge">100% Grátis</div>
+            <h3>Sair de Todas as Comunidades</h3>
+            <p>Localiza e sai automaticamente de todas as comunidades do Twitter nas quais a conta ingressou.</p>
+            <div class="xaction-instructions">Vá para: <code>x.com/SEU_USUARIO/communities</code> - Abra F12</div>
+            <div class="xaction-actions">
+              <button class="btn btn-secondary btn-sm" onclick="copyToolScript('leaveCommunities')">Copiar Script (F12)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Live Logs Terminal -->
+      <div class="tab-content" id="tab-logs">
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-yellow"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="terminal-title">LIVE TELEMETRY // REAL-TIME DISPATCH LOGS</div>
+            <button class="terminal-clear" onclick="clearLogs()">Limpar Console</button>
+          </div>
+          <div class="terminal-body" id="terminal-body">
+            <div class="log-entry log-system">
+              <span class="log-time">[SISTEMA]</span> Motor pronto. Aguardando disparo de rotinas.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Settings -->
+      <div class="tab-content" id="tab-settings">
+        <div class="settings-grid">
+          <div class="settings-card">
+            <h3>Fase 1: Parâmetros de Educação (Telegram)</h3>
+            <p class="settings-hint">A conta pesquisa por "telegram" e curte posts diretamente da página do Telegram para aquecer o perfil.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Mínimo de Posts Curtidos:</label>
+                <input type="number" id="cfg-min-edu" value="3" min="1" max="20">
+              </div>
+              <div class="form-group">
+                <label>Máximo de Posts Curtidos:</label>
+                <input type="number" id="cfg-max-edu" value="6" min="1" max="30">
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Fase 2: Engajamento no Feed & Regra 40-45%</h3>
+            <p class="settings-hint">A conta comenta no feed com o link atribuído e curte entre 40% a 45% dos posts onde comentou.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Probabilidade Mínima de Curtida (%):</label>
+                <input type="number" id="cfg-prob-min" value="40" min="0" max="100">
+              </div>
+              <div class="form-group">
+                <label>Probabilidade Máxima de Curtida (%):</label>
+                <input type="number" id="cfg-prob-max" value="45" min="0" max="100">
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Delays e Humanização (Segundos)</h3>
+            <p class="settings-hint">Jitter randômico entre cada ação para simular comportamento humano e contornar rate limits.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Delay Mínimo (s):</label>
+                <input type="number" id="cfg-delay-min" value="3.0" step="0.5">
+              </div>
+              <div class="form-group">
+                <label>Delay Máximo (s):</label>
+                <input type="number" id="cfg-delay-max" value="7.0" step="0.5">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()" style="margin-top: 15px;">Salvar Parâmetros</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Import Modal -->
+  <div class="modal-overlay hidden" id="import-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>Importação em Massa (1 Conta : 1 Proxy : 1 Link + Grupos)</h2>
+        <button class="modal-close" onclick="closeImportModal()">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-instructions">
+          Cole seus dados linha por linha. O sistema irá associar automaticamente a <strong>Linha 1 da Conta</strong> com a <strong>Linha 1 do Proxy</strong> e a <strong>Linha 1 do Link</strong>. Para separar grupos, deixe uma linha em branco entre os blocos de contas.
+        </p>
+
+        <div class="import-columns">
+          <div class="import-col">
+            <label>1. Contas (Auth Tokens) <span class="required">*</span></label>
+            <div class="col-hint">Formato: auth_token (1 por linha)</div>
+            <textarea id="import-tokens" placeholder="e4a78c903...&#10;b12f45c99...&#10;7a89e102f..."></textarea>
+          </div>
+
+          <div class="import-col">
+            <label>2. Proxies (1 para cada conta) <span class="required">*</span> — host:port:user:password ou host:port@user:password</label>
+            <div class="col-hint">Exemplos: host:port:user:password ou host:port@user:password</div>
+            <textarea id="import-proxies" placeholder="192.168.1.10:8000:login:senha&#10;192.168.1.11:8000@login:senha"></textarea>
+          </div>
+
+          <div class="import-col">
+            <label>3. Links de Destino (1 para cada conta) <span class="required">*</span></label>
+            <div class="col-hint">Link exclusivo inserido no comentário</div>
+            <textarea id="import-links" placeholder="https://t.me/seu_canal_1&#10;https://t.me/seu_canal_2&#10;https://t.me/seu_canal_3"></textarea>
+          </div>
+        </div>
+
+        <div class="import-full-row">
+          <label>4. Modelos de Comentários / Spintax (Opcional)</label>
+          <div class="col-hint">Use <code>{link}</code> onde o link da conta deve ser inserido.</div>
+          <textarea id="import-comments" rows="3" placeholder="Muito interessante isso aqui! Dá uma olhada: {link}&#10;Acompanhando tudo de perto: {link}&#10;Sensacional esse conteúdo! Veja também: {link}"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="loadSampleData()">Carregar Exemplo de Teste</button>
+        <button class="btn btn-secondary" onclick="closeImportModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitImport()">Confirmar & Parear Contas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Downloader Modal -->
+  <div class="modal-overlay hidden" id="video-modal">
+    <div class="modal-container" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>Baixador de Vídeos do Twitter / X</h2>
+        <button class="modal-close" onclick="closeVideoModal()">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-instructions">Insira o link ou ID de qualquer tweet com vídeo para obter o link direto para download do MP4.</p>
+        <div class="form-group">
+          <label>URL ou ID do Tweet:</label>
+          <input type="text" id="video-tweet-url" placeholder="https://x.com/username/status/1234567890">
+        </div>
+        <div id="video-results" style="margin-top: 15px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeVideoModal()">Fechar</button>
+        <button class="btn btn-primary" onclick="submitVideoDownload()">Extrair Vídeo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auto-Like Keywords Modal -->
+  <div class="modal-overlay hidden" id="autolike-modal">
+    <div class="modal-container" style="max-width: 550px;">
+      <div class="modal-header">
+        <h2>Curtidor Automático em Lote por Palavras-Chave</h2>
+        <button class="modal-close" onclick="closeAutoLikeModal()">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-instructions">Todas as contas ativas com seus respectivos proxies buscarão tweets com os termos indicados e curtirão os posts.</p>
+        <div class="form-group">
+          <label>Palavras-Chave (separadas por vírgula):</label>
+          <input type="text" id="autolike-keywords" value="telegram, crypto, web3, ai, brasil">
+        </div>
+        <div class="form-group">
+          <label>Limite de curtidas por conta:</label>
+          <input type="number" id="autolike-count" value="15" min="1" max="50">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAutoLikeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitAutoLikeBatch()">Ativar Curtidor em Lote</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
